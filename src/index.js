@@ -119,7 +119,7 @@ const SEARCH_PAGE = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>视频搜索 - M1907</title>
+<title>视频搜索 - 小法师</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f0f0f;color:#e0e0e0;min-height:100vh}
@@ -364,7 +364,7 @@ const WRAPPER_PAGE = (iframeSrc) => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="X-UA-Compatible" content="ie=edge">
-<title>M1907 云加速播放器</title>
+<title>小法师 云加速播放器</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;background:#000}
