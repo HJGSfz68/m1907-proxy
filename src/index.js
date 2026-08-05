@@ -93,6 +93,27 @@ function normUrl(u) {
   return u.startsWith('//') ? 'https:' + u : u
 }
 
+// Convert mobile youku link (m.youku.com/alipay_video/id_XXX) to PC link (v.youku.com/v_show/id_XXX)
+function toYoukuPcUrl(u) {
+  const m = u.match(/id_([A-Za-z0-9_=-]+)/)
+  if (m) return `https://v.youku.com/v_show/id_${m[1]}.html`
+  return u
+}
+
+// Obtain buvid3/b_nut cookies from bilibili.com homepage (required for search API)
+async function getBilibiliCookies() {
+  try {
+    const res = await fetch('https://www.bilibili.com/', {
+      headers: { 'User-Agent': UA }
+    })
+    const sc = res.headers.get('set-cookie') || ''
+    const cookies = sc.split(/,(?=\s*\w+=)/).map((c) => c.split(';')[0].trim()).filter((c) => c && /^buvid3|^b_nut/.test(c))
+    return cookies
+  } catch (e) {
+    return []
+  }
+}
+
 const SEARCH_PAGE = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -134,7 +155,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <div class="header">
 <h1>视频搜索</h1>
 <div class="search-box">
-<input type="text" id="searchInput" placeholder="输入片名搜索 优酷 / 爱奇艺 / 腾讯视频 / 芒果TV" onkeydown="if(event.key==='Enter')search()">
+<input type="text" id="searchInput" placeholder="输入片名搜索 优酷 / 爱奇艺 / 腾讯视频 / 芒果TV / B站番剧" onkeydown="if(event.key==='Enter')search()">
 <button onclick="search()">搜索</button>
 </div>
 </div>
@@ -198,7 +219,7 @@ const PLATFORMS = [
       while ((m = regex.exec(html)) !== null) {
         const u = m[1].replace(/\\u002F/g, '/')
         const t = m[2].trim()
-        if (!seen.has(u) && t.length > 0) { seen.add(u); items.push({ url: u.startsWith('http') ? u : 'https:' + u, title: t }) }
+        if (!seen.has(u) && t.length > 0) { seen.add(u); items.push({ url: toYoukuPcUrl(u), title: t }) }
       }
       return items
     }
@@ -290,7 +311,35 @@ const PLATFORMS = [
         const d = c?.data || {}
         const t = stripTags(d?.title || d?.hitTitle || '')
         const source = (d?.sourceList || []).find((s) => s?.url)
-        const u = normUrl(source?.url || d?.url || '')
+        const u = normUrl(source?.url || d?.url || '').split('?')[0]
+        if (!u || !t) continue
+        if (!seen.has(u)) { seen.add(u); items.push({ url: u, title: t }) }
+        if (items.length >= 10) break
+      }
+      return items
+    }
+  },
+  {
+    name: '哔哩哔哩番剧',
+    key: 'bilibili',
+    color: '#FB7299',
+    search: async (q) => {
+      const cookies = await getBilibiliCookies()
+      const url = `https://api.bilibili.com/x/web-interface/search/type?search_type=media_bangumi&keyword=${encodeURIComponent(q)}`
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': UA,
+          'Referer': 'https://www.bilibili.com/',
+          'Cookie': cookies.join('; ')
+        }
+      })
+      if (!res.ok) throw new Error('HTTP ' + res.status)
+      const data = await res.json()
+      const items = []
+      const seen = new Set()
+      for (const it of data?.data?.result || []) {
+        const u = normUrl(it?.url || it?.goto_url || '')
+        const t = stripTags(it?.title || '')
         if (!u || !t) continue
         if (!seen.has(u)) { seen.add(u); items.push({ url: u, title: t }) }
         if (items.length >= 10) break
